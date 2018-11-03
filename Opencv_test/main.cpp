@@ -217,22 +217,16 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 		for (int j = 0; j < src.rows; j++) {
 			if (j % 16 == 0) Block_Row++;
 			//src.at<uchar>(j,i) ^= EncKey(LxKey[Block_Row],LyKey[Block_Col],RxKey[M-Block_Row],RyKey[N-Block_Col])
-			cout << EncKey(LxKey[Block_Row], LyKey[Block_Col], RxKey[M - Block_Row], RyKey[N - Block_Col]) << endl;
+			//cout << EncKey(LxKey[Block_Row], LyKey[Block_Col], RxKey[M - Block_Row], RyKey[N - Block_Col]) << endl;
 		}
 	}
+
 
 	return src;
 }
 
 int main()
 {
-	string input = "grape";
-	string output1 = sha256(input);
-
-	cout << "sha256('" << input << "'):" << output1 << endl;
-	
-
-
 	Mat src;
 	int Block = 16;
 	int M, N;
@@ -248,6 +242,8 @@ int main()
 	{
 		return -1;
 	}
+
+	cout << src.at<uchar>(100, 100) << endl;
 
 	string* Lx_key = Create_EncLXKey(M);
 	string* Ly_key = Create_EncLYKey(N);
