@@ -213,9 +213,6 @@ string EncKey(string lx, string ly, string rx, string ry) {
 Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N) {
 	int Block_Row, Block_Col=0;
 	int row, col = 0;
-	Mat* BLOCKIMAGE = new Mat[M*N];
-	Mat tempMat;
-	
 	string *temp = new string[M*N];
 
 	for (int k = 0; k < M*N; k++) {
@@ -225,32 +222,10 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 			if (col % 16 == 0) col++;
 			for (int j = 0; j < src.rows; j++) {
 				if (row % 16 == 0) row++;
-				if (i <= 16 * (col + 1) - 1 && j <= 16 * (row + 1) - 1 && j >= 16 * row && i >= 16 * col)
-				{
-					temp[k] += src.at<uchar>(i, j);
-					cout << src.at<uchar>(i, j) << " ";
-				}
-			}
-		}
-		break;
-	}
-	
-
-	/*
-	char* EncBlock = new char[M*N];
-	for (int k = 0; k < M*N; k++) {
-		string buf = "";
-		for (int l = 0; l < BLOCKIMAGE[k].cols; l++) {
-			for (int n = 0; n < BLOCKIMAGE[k].rows; n++) {
-				char* BLOCK = new char[8];
-				buf += _itoa(src.at<uchar>(l, n), BLOCK, 2);
-				//EncBlock[k] = buf.c_str ^ EncKey(LxKey[n], LyKey[l], RxKey[M -n], RyKey[N - l]).c_str;
+				if (i <= 16 * (col + 1) - 1 && j <= 16 * (row + 1) - 1 && j >= 16 * row && i >= 16 * col) temp[k] += src.at<uchar>(i, j);
 			}
 		}
 	}
-	*/
-	//cout << EncBlock[8] << endl;
-	
 
 	return src;
 }
@@ -272,21 +247,8 @@ int main()
 	if (!src.data)
 	{
 		return -1;
-	}
-	
+	}	
 
-	char buf[10];
-	cout << _itoa(10, buf, 2) << endl;
-	
-	for (int i = 0; i < src.cols; i++)
-	{
-		for (int j = 0; j < src.rows; j++) {
-			cout << src.at<uchar>(i, j) << " ";
-		}
-		cout << endl;
-	}
-
-	/*
 	string* Lx_key = Create_EncLXKey(M);
 	string* Ly_key = Create_EncLYKey(N);
 	string* Rx_key = Create_EncRXKey(M);
@@ -295,7 +257,7 @@ int main()
 	cout << Ly_key[0] << endl;
 
 	Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
-	*/
+	
 	return 0;
 }
 
