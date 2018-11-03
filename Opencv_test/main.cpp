@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fstream>
 #include "sha256.h"
+#include<vector>
 #include <string.h>
 
 using namespace std;
@@ -206,24 +207,55 @@ string* Create_EncRYKey(int n) {
 }
 string EncKey(string lx, string ly, string rx, string ry) {
 	string tempKey = sha256(lx + ly + rx + ry);
-	for (int i = 0; i < 8; i++)	tempKey += sha256(tempKey);
+	for (int i = 0; i < 7; i++)	tempKey += sha256(tempKey);
 	return tempKey;
 }
 Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N) {
 	int Block_Row, Block_Col=0;
-	for (int i = 0; i < src.cols; i++) {
-		if (i % 16 == 0) Block_Col++;
-		Block_Row = 0;
-		for (int j = 0; j < src.rows; j++) {
-			if (j % 16 == 0) Block_Row++;
-			//src.at<uchar>(j,i) ^= EncKey(LxKey[Block_Row],LyKey[Block_Col],RxKey[M-Block_Row],RyKey[N-Block_Col])
-			//cout << EncKey(LxKey[Block_Row], LyKey[Block_Col], RxKey[M - Block_Row], RyKey[N - Block_Col]) << endl;
+	int row, col = 0;
+	Mat* BLOCKIMAGE = new Mat[M*N];
+	Mat tempMat;
+	
+	string *temp = new string[M*N];
+
+	for (int k = 0; k < M*N; k++) {
+		for (int i = 0; i < src.cols; i++)
+		{
+			row = 0;
+			if (col % 16 == 0) col++;
+			for (int j = 0; j < src.rows; j++) {
+				if (row % 16 == 0) row++;
+				if (i <= 16 * (col + 1) - 1 && j <= 16 * (row + 1) - 1 && j >= 16 * row && i >= 16 * col)
+				{
+					temp[k] += src.at<uchar>(i, j);
+					cout << src.at<uchar>(i, j) << " ";
+				}
+			}
+		}
+		break;
+	}
+	
+
+	/*
+	char* EncBlock = new char[M*N];
+	for (int k = 0; k < M*N; k++) {
+		string buf = "";
+		for (int l = 0; l < BLOCKIMAGE[k].cols; l++) {
+			for (int n = 0; n < BLOCKIMAGE[k].rows; n++) {
+				char* BLOCK = new char[8];
+				buf += _itoa(src.at<uchar>(l, n), BLOCK, 2);
+				//EncBlock[k] = buf.c_str ^ EncKey(LxKey[n], LyKey[l], RxKey[M -n], RyKey[N - l]).c_str;
+			}
 		}
 	}
-
+	*/
+	//cout << EncBlock[8] << endl;
+	
 
 	return src;
 }
+
+
 
 int main()
 {
@@ -231,7 +263,6 @@ int main()
 	int Block = 16;
 	int M, N;
 
-	//int EncKey = 1;
 	/// Load an image
 	src = imread("dog.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 	M = src.rows / Block;
@@ -242,16 +273,29 @@ int main()
 	{
 		return -1;
 	}
+	
 
-	cout << src.at<uchar>(100, 100) << endl;
+	char buf[10];
+	cout << _itoa(10, buf, 2) << endl;
+	
+	for (int i = 0; i < src.cols; i++)
+	{
+		for (int j = 0; j < src.rows; j++) {
+			cout << src.at<uchar>(i, j) << " ";
+		}
+		cout << endl;
+	}
 
+	/*
 	string* Lx_key = Create_EncLXKey(M);
 	string* Ly_key = Create_EncLYKey(N);
 	string* Rx_key = Create_EncRXKey(M);
 	string* Ry_key = Create_EncRYKey(N);
 
-	Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
+	cout << Ly_key[0] << endl;
 
+	Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
+	*/
 	return 0;
 }
 
