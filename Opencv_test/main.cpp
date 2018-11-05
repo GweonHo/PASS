@@ -8,15 +8,16 @@
 #include "sha256.h"
 #include<vector>
 #include <string.h>
+#include<bitset>
 
 using namespace std;
 using namespace cv;
 
-// TODO 
-// LX, LY , RX , RY 랜덤하게 설정 char[32]
-// 그리고 초기에 LXKey_arr 값 채워주고 
-// (이미지 받아서 돌리면 채워지겠고) , -> 채워질 때는 sha256 8번 돌려서 넣고
-// Dec할 때는 Key array에서 가져와서 XOR 하면 됨
+/*
+블록 매트릭스 : 사진을 블록사이즈로 나눈 결과로 얻은 매트리스
+ex) 48 x 48 사진을 블록사이즈 16으로 나눈 결과를 블록 매트릭스라 할 때,
+	이 때, 이 블록 매트릭스의 행의 개수를 M , 열의 개수를 N
+*/
 
 
 char Lx_arr[32] = { "AKEIDJFIEPWLQIEKRLSOCPDLEKRJSOC" };
@@ -24,6 +25,7 @@ char Ly_arr[32] = { "DKELDKCMVKDLSLWKEIRJWLAKDMCKVLD" };
 char Rx_arr[32] = { "HELLOMYNAMEISINFORMATIONSYSTEMH" };
 char Ry_arr[32] = { "OHKOREAVERYBEAUTIFULOHMYGODGOOD" };
 
+// Sha256을 위한 함수
 #pragma region Sha256
 
 
@@ -162,6 +164,7 @@ std::string sha256(std::string input)
 }
 #pragma endregion
 
+//모든 Lx 키를 만들어서 string*로 반환하는 함수
 string* Create_EncLXKey(int m) {
 	string *Lx_Key = new string[m];
 
@@ -172,7 +175,7 @@ string* Create_EncLXKey(int m) {
 	}
 	return Lx_Key;
 }
-
+//모든 Rx 키를 만들어서 string*로 반환하는 함수
 string* Create_EncLYKey(int n) {
 	string *Ly_Key=new string[n];
 
@@ -183,7 +186,7 @@ string* Create_EncLYKey(int n) {
 	}
 	return Ly_Key;
 }
-
+//모든 Rx 키를 만들어서 string*로 반환하는 함수
 string* Create_EncRXKey(int m) {
 	string *Rx_Key =new string[m];
 	
@@ -194,7 +197,7 @@ string* Create_EncRXKey(int m) {
 	}
 	return Rx_Key;
 }
-
+//모든 Ry 키를 만들어서 string*로 반환하는 함수
 string* Create_EncRYKey(int n) {
 	
 	string *Ry_Key = new string[n];
@@ -208,64 +211,91 @@ string* Create_EncRYKey(int n) {
 
 	return Ry_Key;
 }
+//블록에 맞는 lx , ly , rx , ry 키를 입력으로 갖고, sha256을 8번 돌려서 append 한 것을 반환하는 함수
 string EncKey(string lx, string ly, string rx, string ry) {
 	string tempKey = sha256(lx + ly + rx + ry);
 	for (int i = 0; i < 7; i++)	tempKey += sha256(tempKey);
 	return tempKey;
 }
+//string을 bitset 형식으로 바꿔주는 함수
+std::bitset<256> to_bitset(std::string s) {
+	auto binary = [](char c) {return c == '0' || c == '1'; };
+	auto not_binary = [binary](char c) {return !binary(c);  };
 
-void Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N) {
-	int Block_Row, Block_Col=0;
-	Mat *BlockImage = new Mat[M*N];
+	s.erase(std::remove_if(begin(s), end(s), not_binary), end(s));
 
-	/// (i,j) : i = row , j = column
-	// M : 45 , N : 80
-
-	for (int k = 0; k < M*N; k++) {
-		for (int m = 0; m < M; m++) { // row
-			for (int n = 0; n < N; n++) { //col
-			//	BlockImage[k] = src(Rect((16 * m), (16 * n), (16 * m) + 15, (16 * n) + 15)).clone();
-				for (int i = 0; i < 16; i++) {
-					for (int j = 0; j < 16; j++) {
-						
-						//temp[k] = src.at<uchar>((16 * m) + i, (16 * n) + j);
-						cout<< src.at<uchar>((16 * m) + i, (16 * n) + j)<<" ";
-					}
-				}
-			}
-		}
-	}
-
+	return std::bitset<256>(s);
 }
 
+// 입력값 : Encryption할 사진 , Lx 키배열 , Rx 키배열 , Ly 키배열 , Ry 키배열 , 블록 매트릭스의 행의 개수 , 블록 매트릭스의 열의 개수
+Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N) {
+	Mat EncMat = src.clone(); // Encryption될 행력을 만듬
+	string* EncBlock = new string[M*N]; // Encryption된 블락들을 저장하는 string 배열 초기화
+	int First_count = 0,Second_count = 0;// 블록 카운트를 위한 변수
+
+	// (i,j) : i = row , j = column
+	// M : 45 , N : 80
+
+		for (int m = 0; m < M; m++) { // 블록매트릭스의 행만큼 실행되는 함수
+			for (int n = 0; n < N; n++) { //블록매트릭스의 열만큼 실행되는 함수 지금까지 M*N번
+				string BlockData = ""; // 하나의 블록에 대한 데이터를 저장할 임시 string 변수
+				for (int i = 0; i < 16; i++) {
+					for (int j = 0; j < 16; j++) 
+						BlockData += src.at<uchar>((16 * m) + i, (16 * n) + j);//블록에 대한 데이터를 BlockData에 저장				
+				}
+				EncBlock[First_count] = (to_bitset(BlockData)^to_bitset(EncKey(LxKey[0], LyKey[0], RxKey[M - m-1], RyKey[N - n-1]))).to_string(); // XOR 연산
+				//EncBlock[First_count] = (std::bitset<>(BlockData) ^ std::bitset<2048>(EncKey(LxKey[0], LyKey[0], RxKey[M - m - 1], RyKey[N - n - 1]))).to_string();
+				First_count++;
+			}
+		} 
+	
+		imwrite("temp.jpeg", EncMat);
+
+		for (int m = 0; m < M; m++) { // row
+			for (int n = 0; n < N; n++) { //col
+				int tempCount = 0;
+				for (int i = 0; i < 16; i++) {
+					for (int j = 0; j < 16; j++) {
+						EncMat.at<uchar>((16 * m) + i, (16 * n) + j) = EncBlock[Second_count][tempCount];
+						tempCount++;
+					}
+				}
+				Second_count++;
+			}
+		}
+		return EncMat;
+}
 
 
 int main()
 {
-	Mat src;
+	Mat src,dst,Dec;
 	int Block = 16;
 	int M, N;
 
 	/// Load an image
 	src = imread("dog.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-	M = src.rows / Block;
-	N = src.cols / Block;
-	cout << "ROW : " << M << "/" << "COLUMN : " << N << endl;
+	M = src.rows / Block; // 블록 매트릭스의 행의 개수
+	N = src.cols / Block; // 블록 매트릭스의 열의 개수
+	cout << "블록매트릭스의 행 : " << M << endl << "블록 매트릭스의 열 : " << N << endl;
 
 	//dst = src.clone();
 	if (!src.data)
 	{
 		return -1;
 	}	
-
+	// LX, LY, RX , RY에 맞는 키 배열을 생성하는 곳
+	cout << "LX, LY, RX , RY에 맞는 키 배열을 생성하는 곳" << endl;
 	string* Lx_key = Create_EncLXKey(M);
 	string* Ly_key = Create_EncLYKey(N);
 	string* Rx_key = Create_EncRXKey(M);
 	string* Ry_key = Create_EncRYKey(N);
+	cout << "키 배열 생성 종료" << endl;
 
-	//cout << Ly_key[0] << endl;
-
-	 Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
+	cout << "Encryption 시작" << endl;
+	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
+	cout << "Encryption 종료" << endl;
+	imwrite("dst.jpeg", dst);
 	
 	return 0;
 }
