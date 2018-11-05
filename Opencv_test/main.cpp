@@ -19,6 +19,13 @@ using namespace cv;
 // Dec할 때는 Key array에서 가져와서 XOR 하면 됨
 
 
+char Lx_arr[32] = { "AKEIDJFIEPWLQIEKRLSOCPDLEKRJSOC" };
+char Ly_arr[32] = { "DKELDKCMVKDLSLWKEIRJWLAKDMCKVLD" };
+char Rx_arr[32] = { "HELLOMYNAMEISINFORMATIONSYSTEMH" };
+char Ry_arr[32] = { "OHKOREAVERYBEAUTIFULOHMYGODGOOD" };
+
+#pragma region Sha256
+
 
 
 const unsigned int SHA256::sha256_k[64] = //UL = uint32
@@ -40,10 +47,6 @@ const unsigned int SHA256::sha256_k[64] = //UL = uint32
 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2 };
 
 
-char Lx_arr[32] = {"AKEIDJFIEPWLQIEKRLSOCPDLEKRJSOC"};
-char Ly_arr[32] = {"DKELDKCMVKDLSLWKEIRJWLAKDMCKVLD"};
-char Rx_arr[32] = {"HELLOMYNAMEISINFORMATIONSYSTEMH"};
-char Ry_arr[32] = {"OHKOREAVERYBEAUTIFULOHMYGODGOOD"};
 
 
 
@@ -157,7 +160,7 @@ std::string sha256(std::string input)
 		sprintf(buf + i * 2, "%02x", digest[i]);
 	return std::string(buf);
 }
-
+#pragma endregion
 
 string* Create_EncLXKey(int m) {
 	string *Lx_Key = new string[m];
@@ -173,7 +176,7 @@ string* Create_EncLXKey(int m) {
 string* Create_EncLYKey(int n) {
 	string *Ly_Key=new string[n];
 
-	std::string temp = sha256(Lx_arr);
+	std::string temp = sha256(Ly_arr);
 	for (int i = 0; i < n; ++i) {
 		Ly_Key[i] = temp;
 		temp = sha256(temp);
@@ -184,7 +187,7 @@ string* Create_EncLYKey(int n) {
 string* Create_EncRXKey(int m) {
 	string *Rx_Key =new string[m];
 	
-	std::string temp = sha256(Lx_arr);
+	std::string temp = sha256(Rx_arr);
 	for (int i = 0; i < m; ++i) {
 		Rx_Key[i] = temp;
 		temp = sha256(temp);
@@ -196,7 +199,7 @@ string* Create_EncRYKey(int n) {
 	
 	string *Ry_Key = new string[n];
 
-	std::string temp = sha256(Lx_arr);
+	std::string temp = sha256(Ry_arr);
 	for (int i = 0; i < n; ++i) {
 		Ry_Key[i] = temp;
 		temp = sha256(temp);
@@ -210,24 +213,29 @@ string EncKey(string lx, string ly, string rx, string ry) {
 	for (int i = 0; i < 7; i++)	tempKey += sha256(tempKey);
 	return tempKey;
 }
-Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N) {
+
+void Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N) {
 	int Block_Row, Block_Col=0;
-	int row, col = 0;
-	string *temp = new string[M*N];
+	Mat *BlockImage = new Mat[M*N];
+
+	/// (i,j) : i = row , j = column
+	// M : 45 , N : 80
 
 	for (int k = 0; k < M*N; k++) {
-		for (int i = 0; i < src.cols; i++)
-		{
-			row = 0;
-			if (col % 16 == 0) col++;
-			for (int j = 0; j < src.rows; j++) {
-				if (row % 16 == 0) row++;
-				if (i <= 16 * (col + 1) - 1 && j <= 16 * (row + 1) - 1 && j >= 16 * row && i >= 16 * col) temp[k] += src.at<uchar>(i, j);
+		for (int m = 0; m < M; m++) { // row
+			for (int n = 0; n < N; n++) { //col
+			//	BlockImage[k] = src(Rect((16 * m), (16 * n), (16 * m) + 15, (16 * n) + 15)).clone();
+				for (int i = 0; i < 16; i++) {
+					for (int j = 0; j < 16; j++) {
+						
+						//temp[k] = src.at<uchar>((16 * m) + i, (16 * n) + j);
+						cout<< src.at<uchar>((16 * m) + i, (16 * n) + j)<<" ";
+					}
+				}
 			}
 		}
 	}
 
-	return src;
 }
 
 
@@ -242,6 +250,7 @@ int main()
 	src = imread("dog.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 	M = src.rows / Block;
 	N = src.cols / Block;
+	cout << "ROW : " << M << "/" << "COLUMN : " << N << endl;
 
 	//dst = src.clone();
 	if (!src.data)
@@ -254,9 +263,9 @@ int main()
 	string* Rx_key = Create_EncRXKey(M);
 	string* Ry_key = Create_EncRYKey(N);
 
-	cout << Ly_key[0] << endl;
+	//cout << Ly_key[0] << endl;
 
-	Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
+	 Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
 	
 	return 0;
 }
