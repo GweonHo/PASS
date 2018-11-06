@@ -214,28 +214,33 @@ string* Create_EncRYKey(int n) {
 //블록에 맞는 lx , ly , rx , ry 키를 입력으로 갖고, sha256을 8번 돌려서 append 한 것을 반환하는 함수
 string EncKey(string lx, string ly, string rx, string ry) {
 	string tempKey = sha256(lx + ly + rx + ry);
-	for (int i = 0; i < 7; i++)	tempKey += sha256(tempKey);
+	for (int i = 0; i < 3; i++)	tempKey += sha256(tempKey);
+	//for (int i = 0; i < 99; i++)	tempKey += sha256(tempKey);
 	return tempKey;
 }
+
 //string을 bitset 형식으로 바꿔주는 함수
-std::bitset<256> to_bitset(std::string s) {
+std::bitset<2048> to_bitset(std::string s) {
 	auto binary = [](char c) {return c == '0' || c == '1'; };
 	auto not_binary = [binary](char c) {return !binary(c);  };
 
 	s.erase(std::remove_if(begin(s), end(s), not_binary), end(s));
 
-	return std::bitset<256>(s);
+	return std::bitset<2048>(s);
 }
+
 
 // 입력값 : Encryption할 사진 , Lx 키배열 , Rx 키배열 , Ly 키배열 , Ry 키배열 , 블록 매트릭스의 행의 개수 , 블록 매트릭스의 열의 개수
 Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N) {
-	Mat EncMat = src.clone(); // Encryption될 행력을 만듬
-	string* EncBlock = new string[M*N]; // Encryption된 블락들을 저장하는 string 배열 초기화
+	Mat EncMat = src.clone(); // Encryption된 사진을 넣을 행렬
+	//string* EncBlock = new string[M*N]; // Encryption된 블락들을 저장하는 string 배열 초기화
+	string *EncBlock = new string[M*N];
 	int First_count = 0,Second_count = 0;// 블록 카운트를 위한 변수
-
+	
 	// (i,j) : i = row , j = column
-	// M : 45 , N : 80
+	// M : 45 , N : 80 (dog.jpeg) 
 
+	
 		for (int m = 0; m < M; m++) { // 블록매트릭스의 행만큼 실행되는 함수
 			for (int n = 0; n < N; n++) { //블록매트릭스의 열만큼 실행되는 함수 지금까지 M*N번
 				string BlockData = ""; // 하나의 블록에 대한 데이터를 저장할 임시 string 변수
@@ -243,14 +248,43 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 					for (int j = 0; j < 16; j++) 
 						BlockData += src.at<uchar>((16 * m) + i, (16 * n) + j);//블록에 대한 데이터를 BlockData에 저장				
 				}
-				EncBlock[First_count] = (to_bitset(BlockData)^to_bitset(EncKey(LxKey[0], LyKey[0], RxKey[M - m-1], RyKey[N - n-1]))).to_string(); // XOR 연산
-				//EncBlock[First_count] = (std::bitset<>(BlockData) ^ std::bitset<2048>(EncKey(LxKey[0], LyKey[0], RxKey[M - m - 1], RyKey[N - n - 1]))).to_string();
+				string EncTempData = "";
+				for (int i = 0; i <256; i++) 
+				{
+				
+					EncTempData += BlockData[i] ^ EncKey(LxKey[m], LyKey[n], RxKey[M - m - 1], RyKey[N - n - 1])[i];
+				}
+				
+				EncBlock[First_count] = EncTempData;
+				cout << "몇번째 블락입니까? => " << First_count << endl << "EncBlock 데이터 :  " << EncBlock[First_count] << endl;
 				First_count++;
+				
 			}
 		} 
-	
-		imwrite("temp.jpeg", EncMat);
+		
+	/*
+		for (int m = 0; m < M; m++) { // 블록매트릭스의 행만큼 실행되는 함수
+			for (int n = 0; n < N; n++) { //블록매트릭스의 열만큼 실행되는 함수 지금까지 M*N번
+				string BlockData = ""; // 하나의 블록에 대한 데이터를 저장할 임시 string 변수
+				for (int i = 0; i < 80; i++) {
+					for (int j = 0; j < 80; j++)
+						BlockData += src.at<uchar>((80 * m) + i, (80 * n) + j);//블록에 대한 데이터를 BlockData에 저장				
+				}
+				string EncTempData = "";
+				for (int i = 0; i <6400; i++)
+				{
 
+					EncTempData += BlockData[i] ^ EncKey(LxKey[m], LyKey[n], RxKey[M - m - 1], RyKey[N - n - 1])[i];
+				}
+
+				EncBlock[First_count] = EncTempData;
+
+				First_count++;
+				cout << "몇번째 블락입니까? => " << First_count << endl;
+			}
+		}
+		*/
+		// Encryption 된 블락들을 EncMat에 넣는 과정
 		for (int m = 0; m < M; m++) { // row
 			for (int n = 0; n < N; n++) { //col
 				int tempCount = 0;
@@ -263,6 +297,22 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 				Second_count++;
 			}
 		}
+		
+		/*
+		for (int m = 0; m < M; m++) { // row
+			for (int n = 0; n < N; n++) { //col
+				int tempCount = 0;
+				for (int i = 0; i < 80; i++) {
+					for (int j = 0; j < 80; j++) {
+						EncMat.at<uchar>((80 * m) + i, (80 * n) + j) = EncBlock[Second_count][tempCount];
+						tempCount++;
+					}
+				}
+				Second_count++;
+			}
+		}
+		*/
+
 		return EncMat;
 }
 
@@ -271,6 +321,7 @@ int main()
 {
 	Mat src,dst,Dec;
 	int Block = 16;
+	//int Block = 80;
 	int M, N;
 
 	/// Load an image
@@ -293,9 +344,11 @@ int main()
 	cout << "키 배열 생성 종료" << endl;
 
 	cout << "Encryption 시작" << endl;
+
 	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
+
 	cout << "Encryption 종료" << endl;
-	imwrite("dst.jpeg", dst);
+	imwrite("dst_lion_Block16.jpeg", dst);
 	
 	return 0;
 }
