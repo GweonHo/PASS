@@ -13,6 +13,10 @@
 using namespace std;
 using namespace cv;
 
+//TODO
+//부분 decryption 을 하라
+
+
 /*
 블록 매트릭스 : 사진을 블록사이즈로 나눈 결과로 얻은 매트리스
 ex) 48 x 48 사진을 블록사이즈 16으로 나눈 결과를 블록 매트릭스라 할 때,
@@ -231,7 +235,7 @@ std::bitset<2048> to_bitset(std::string s) {
 
 
 // 입력값 : Encryption할 사진 , Lx 키배열 , Rx 키배열 , Ly 키배열 , Ry 키배열 , 블록 매트릭스의 행의 개수 , 블록 매트릭스의 열의 개수
-Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N) {
+Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N,int BlockSize) {
 	Mat EncMat = src.clone(); // Encryption된 사진을 넣을 행렬
 	//string* EncBlock = new string[M*N]; // Encryption된 블락들을 저장하는 string 배열 초기화
 	string *EncBlock = new string[M*N];
@@ -239,29 +243,23 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 	
 	// (i,j) : i = row , j = column
 	// M : 45 , N : 80 (dog.jpeg) 
-
-	
 		for (int m = 0; m < M; m++) { // 블록매트릭스의 행만큼 실행되는 함수
 			for (int n = 0; n < N; n++) { //블록매트릭스의 열만큼 실행되는 함수 지금까지 M*N번
 				string BlockData = ""; // 하나의 블록에 대한 데이터를 저장할 임시 string 변수
-				for (int i = 0; i < 16; i++) {
-					for (int j = 0; j < 16; j++) 
-						BlockData += src.at<uchar>((16 * m) + i, (16 * n) + j);//블록에 대한 데이터를 BlockData에 저장				
+				for (int i = 0; i < BlockSize; i++) {
+					for (int j = 0; j < BlockSize; j++) 
+						BlockData += src.at<uchar>((BlockSize * m) + i, (BlockSize * n) + j);//블록에 대한 데이터를 BlockData에 저장				
 				}
 				string EncTempData = "";
-				for (int i = 0; i <256; i++) 
+				for (int i = 0; i <BlockSize*BlockSize; i++) 
 				{
-				
 					EncTempData += BlockData[i] ^ EncKey(LxKey[m], LyKey[n], RxKey[M - m - 1], RyKey[N - n - 1])[i];
 				}
-				
 				EncBlock[First_count] = EncTempData;
-				cout << "몇번째 블락입니까? => " << First_count << endl << "EncBlock 데이터 :  " << EncBlock[First_count] << endl;
-				First_count++;
-				
+				//cout << "몇번째 블락입니까? => " << First_count << endl << endl<< "EncBlock 데이터 :  " << EncBlock[First_count] << endl<<endl<<" EncKey 데이터 : "<< EncKey(LxKey[m], LyKey[n], RxKey[M - m - 1], RyKey[N - n - 1])<<endl<<endl;
+				++First_count;
 			}
 		} 
-		
 	/*
 		for (int m = 0; m < M; m++) { // 블록매트릭스의 행만큼 실행되는 함수
 			for (int n = 0; n < N; n++) { //블록매트릭스의 열만큼 실행되는 함수 지금까지 M*N번
@@ -288,13 +286,13 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 		for (int m = 0; m < M; m++) { // row
 			for (int n = 0; n < N; n++) { //col
 				int tempCount = 0;
-				for (int i = 0; i < 16; i++) {
-					for (int j = 0; j < 16; j++) {
-						EncMat.at<uchar>((16 * m) + i, (16 * n) + j) = EncBlock[Second_count][tempCount];
+				for (int i = 0; i < BlockSize; i++) {
+					for (int j = 0; j < BlockSize; j++) {
+						EncMat.at<uchar>((BlockSize * m) + i, (BlockSize * n) + j) = EncBlock[Second_count][tempCount];
 						tempCount++;
 					}
 				}
-				Second_count++;
+				++Second_count;
 			}
 		}
 		
@@ -316,19 +314,81 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 		return EncMat;
 }
 
+Mat Decryption_Matrix(Mat src, string* LxKey, string* RxKey, string* LyKey, string* RyKey, int M, int N, array<int,100> NumOfBlock,int BlockSize) {
+	Mat DecMat = src.clone();
+
+	string *DecBlock = new string[M*N];
+	
+
+	//Block Num => BlockSize*N + N;
+	//0		~		n - 1
+	//n		~		2n - 1
+	//2n	~		3n - 1
+	//3n	~		4n - 1
+	//	Num / N = > m;
+	//	Num % N = > n;
+
+
+	for (int Num = 0; Num < NumOfBlock.size(); Num++) {
+		string DecBlockData = "";
+		int tempNum = NumOfBlock[Num];
+		int Block_M = tempNum / N;
+		int Block_N = tempNum % N;
+		int count = 0;
+		for (int i = 0; i < BlockSize; i++) {
+			for (int j = 0; j < BlockSize;j++) {
+				DecBlockData += (src.at<uchar>((BlockSize*Block_M + i), (BlockSize*Block_N + j))^ EncKey(LxKey[Block_M], LyKey[Block_N], RxKey[M - (Block_M)- 1], RyKey[N - (Block_N) - 1])[count]);
+				count++;
+			}
+		}
+		cout <<" DecBlckData =>  "<<DecBlockData << endl;
+		DecBlock[Num] = DecBlockData;
+	}
+
+	for (int k = 0; k < NumOfBlock.size(); k++) {
+		int TempNum = NumOfBlock[k];
+		int Block_M = TempNum / N;
+		int Block_N = TempNum % N;
+		int count = 0;
+		for (int i = 0; i < BlockSize; i++) {
+			for (int j = 0; j < BlockSize; j++) {
+				DecMat.at<uchar>((BlockSize*Block_M + i), (BlockSize*Block_N + j)) = DecBlock[k][count];
+				//cout << " 랜덤 Dec 배열 값 :  "<< NumOfBlock[k] << endl;
+				++count;
+			}
+		}
+
+	}
+
+	return DecMat;
+}
 
 int main()
 {
 	Mat src,dst,Dec;
-	int Block = 16;
+	int BlockSize = 16;
 	//int Block = 80;
 	int M, N;
+	array<int, 100> testBlock;
+	
 
 	/// Load an image
-	src = imread("dog.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-	M = src.rows / Block; // 블록 매트릭스의 행의 개수
-	N = src.cols / Block; // 블록 매트릭스의 열의 개수
-	cout << "블록매트릭스의 행 : " << M << endl << "블록 매트릭스의 열 : " << N << endl;
+	src = imread("lion.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+	M = src.rows / BlockSize; // 블록 매트릭스의 행의 개수
+	N = src.cols / BlockSize; // 블록 매트릭스의 열의 개수
+	cout << "블록매트릭스의 행 : " << M << endl << "블록 매트릭스의 열 : " << N << endl<<endl;
+
+	srand(unsigned(time(NULL)));
+	cout << "블록 넘버 테스트 : " << endl;
+	for (int i = 0; i < testBlock.size(); i++) {
+		if (i % 10 == 0)
+			cout << endl;
+		testBlock[i] = rand() % M*N;
+		cout << testBlock[i] << " ";
+		
+	}
+	cout << endl << "test 랜덤 블락 생성완료" << endl;
+
 
 	//dst = src.clone();
 	if (!src.data)
@@ -344,12 +404,16 @@ int main()
 	cout << "키 배열 생성 종료" << endl;
 
 	cout << "Encryption 시작" << endl;
-
-	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N);
-
+	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N,BlockSize);
+	imwrite("Enc_lion_Block16.jpeg", dst);
 	cout << "Encryption 종료" << endl;
-	imwrite("dst_lion_Block16.jpeg", dst);
-	
+
+
+	cout << "Decryption 시작" << endl;
+	Dec = Decryption_Matrix(dst, Lx_key, Rx_key, Ly_key, Ry_key, M, N, testBlock, BlockSize);
+	imwrite("Dec_lion_Block16.jpeg", Dec);
+	cout << "Decryption 종료" << endl;
+
 	return 0;
 }
 
