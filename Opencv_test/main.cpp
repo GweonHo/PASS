@@ -314,12 +314,11 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 		return EncMat;
 }
 
+//Decryption 함수 입력값
+//Encryptino된 매트릭스 , Lx , Rx , Ly, Ry 키배열 , 블락 매트릭스 행 , 블락 매트릭스 열 , Decryption할 블락 위치 , 블락 사이즈
 Mat Decryption_Matrix(Mat src, string* LxKey, string* RxKey, string* LyKey, string* RyKey, int M, int N, array<int,100> NumOfBlock,int BlockSize) {
 	Mat DecMat = src.clone();
-
 	string *DecBlock = new string[M*N];
-	
-
 	//Block Num => BlockSize*N + N;
 	//0		~		n - 1
 	//n		~		2n - 1
@@ -327,7 +326,6 @@ Mat Decryption_Matrix(Mat src, string* LxKey, string* RxKey, string* LyKey, stri
 	//3n	~		4n - 1
 	//	Num / N = > m;
 	//	Num % N = > n;
-
 
 	for (int Num = 0; Num < NumOfBlock.size(); Num++) {
 		string DecBlockData = "";
@@ -337,11 +335,10 @@ Mat Decryption_Matrix(Mat src, string* LxKey, string* RxKey, string* LyKey, stri
 		int count = 0;
 		for (int i = 0; i < BlockSize; i++) {
 			for (int j = 0; j < BlockSize;j++) {
-				DecBlockData += (src.at<uchar>((BlockSize*Block_M + i), (BlockSize*Block_N + j))^ EncKey(LxKey[Block_M], LyKey[Block_N], RxKey[M - (Block_M)- 1], RyKey[N - (Block_N) - 1])[count]);
+				DecBlockData += (src.at<uchar>((BlockSize*Block_M + i), (BlockSize*Block_N + j)) ^ EncKey(LxKey[Block_M], LyKey[Block_N], RxKey[M - (Block_M)- 1], RyKey[N - (Block_N) - 1])[count]);
 				count++;
 			}
 		}
-		cout <<" DecBlckData =>  "<<DecBlockData << endl;
 		DecBlock[Num] = DecBlockData;
 	}
 
@@ -354,10 +351,9 @@ Mat Decryption_Matrix(Mat src, string* LxKey, string* RxKey, string* LyKey, stri
 			for (int j = 0; j < BlockSize; j++) {
 				DecMat.at<uchar>((BlockSize*Block_M + i), (BlockSize*Block_N + j)) = DecBlock[k][count];
 				//cout << " 랜덤 Dec 배열 값 :  "<< NumOfBlock[k] << endl;
-				++count;
+				count++;
 			}
 		}
-
 	}
 
 	return DecMat;
