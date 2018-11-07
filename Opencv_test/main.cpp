@@ -9,6 +9,8 @@
 #include<vector>
 #include <string.h>
 #include<bitset>
+#include<ctime>
+#include<cstdlib>
 
 using namespace std;
 using namespace cv;
@@ -332,6 +334,7 @@ Mat Decryption_Matrix(Mat src, string* LxKey, string* RxKey, string* LyKey, stri
 		int tempNum = NumOfBlock[Num];
 		int Block_M = tempNum / N;
 		int Block_N = tempNum % N;
+		cout << "Block M : " << Block_M << " , Block N : " << Block_N << endl<<"블록 넘버 : " <<tempNum<<endl;
 		int count = 0;
 		for (int i = 0; i < BlockSize; i++) {
 			for (int j = 0; j < BlockSize;j++) {
@@ -372,14 +375,14 @@ int main()
 	src = imread("lion.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 	M = src.rows / BlockSize; // 블록 매트릭스의 행의 개수
 	N = src.cols / BlockSize; // 블록 매트릭스의 열의 개수
-	cout << "블록매트릭스의 행 : " << M << endl << "블록 매트릭스의 열 : " << N << endl<<endl;
+	cout << "블록매트릭스의 행 - M  : " << M << endl << "블록 매트릭스의 열 - N : " << N << endl<<endl;
 
-	srand(unsigned(time(NULL)));
+	srand((unsigned int)time(NULL));
 	cout << "블록 넘버 테스트 : " << endl;
 	for (int i = 0; i < testBlock.size(); i++) {
 		if (i % 10 == 0)
 			cout << endl;
-		testBlock[i] = rand() % M*N;
+		testBlock[i] = rand() % (M*N);
 		cout << testBlock[i] << " ";
 		
 	}
