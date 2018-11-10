@@ -185,22 +185,18 @@ std::string sha256(std::string input)
 //모든 Lx 키를 만들어서 string*로 반환하는 함수
 string* Create_EncLXKey(int n,string Lx) {
 	string *Lx_Key = new string[n];
-
-	std::string temp = sha256(Lx);
-	for (int i = 0; i < n; i++) {
-		Lx_Key[i] = temp;
-		temp = sha256(temp);
+	Lx_Key[0] = sha256(Lx);
+	for (int i = 1; i < n; i++) {
+		Lx_Key[i] = sha256(Lx_Key[i - 1]);
 	}
 	return Lx_Key;
 }
 //모든 Rx 키를 만들어서 string*로 반환하는 함수
 string* Create_EncLYKey(int m,string Ly) {
 	string *Ly_Key=new string[m];
-
-	std::string temp = sha256(Ly);
-	for (int i = 0; i < m; i++) {
-		Ly_Key[i] = temp;
-		temp = sha256(temp);
+	Ly_Key[0] = sha256(Ly);
+	for (int i = 1; i <m; i++) {
+		Ly_Key[i] = sha256(Ly_Key[i-1]);
 	}
 	return Ly_Key;
 }
@@ -208,34 +204,20 @@ string* Create_EncLYKey(int m,string Ly) {
 string* Create_EncRXKey(int n,string Rx) {
 	string *Rx_Key =new string[n];
 	
-	std::string temp = sha256(Rx);
-	if (n == 0) {
-		Rx_Key[0] = temp;
-	}
-	else {
-		for (int i = 0; i < n; i++) {
-			Rx_Key[i] = temp;
-			temp = sha256(temp);
-		}
+	Rx_Key[0] = sha256(Rx);
+	for (int i = 1; i < n; i++) {
+		Rx_Key[i] = sha256(Rx_Key[i-1]);
 	}
 	
 	return Rx_Key;
 }
 //모든 Ry 키를 만들어서 string*로 반환하는 함수
 string* Create_EncRYKey(int m,string Ry) {
-	
 	string *Ry_Key = new string[m];
-	std::string temp = sha256(Ry);
-	if (m == 0) {
-		Ry_Key[0] = temp;
+	Ry_Key[0] = sha256(Ry);
+	for (int i = 1; i < m; i++) {
+		Ry_Key[i] = sha256(Ry_Key[i - 1]);
 	}
-	else {
-		for (int i = 0; i < m; i++) {
-			Ry_Key[i] = temp;
-			temp = sha256(temp);
-		}
-	}
-	
 	return Ry_Key;
 }
 
@@ -254,7 +236,7 @@ string Create_Specific_Location_Key_L(string Msk, int Location) {
 //Rx와 관련해서 사용자가 Dec하고 싶은 범위 DecKey 생성하는 함수
 string Create_Specific_Location_Key_Rx(string Msk, int Location,int N) {
 	string Spec_key = sha256(Msk); // Rx_Key[0]
-	for (int i = 0; i < N-Location; i++) {// i < 12
+	for (int i = 0; i <N- Location-1; i++) {// i < 12
 		Spec_key = sha256(Spec_key);
 	}
 
@@ -263,7 +245,7 @@ string Create_Specific_Location_Key_Rx(string Msk, int Location,int N) {
 //Ry와 관련해서 사용자가 Dec하고 싶은 범위 DecKey 생성하는 함수
 string Create_Specific_Location_Key_Ry(string Msk, int Location,int M) {
 	string Spec_key = sha256(Msk); // Ry_Key[0]
-	for (int i = 0; i < M-Location; i++) {
+	for (int i = 0; i < M-Location-1; i++) {
 		Spec_key = sha256(Spec_key);
 	}
 
@@ -309,23 +291,22 @@ Mat Decryption(Mat EncSrc, int M, int N, string* DecKeyGroup, int BlockSize, int
 		Left_N : 0 , Left_M : 0
 		Right_N : 6 , Right_M : 5
 	*/
-	Dec_LxKey = CreateKeyArray(N-Left_N, DecKeyGroup[0]); // Dec_LxKey의 크기 : 18 - 0 = 18
-	Dec_LyKey = CreateKeyArray(M-Left_M, DecKeyGroup[1]); // Dec_LxKey의 크기 : 10 - 0 = 10
-	Dec_RxKey = CreateKeyArray(Right_N, DecKeyGroup[2]); // Dec_LxKey의 크기 :  6
-	Dec_RyKey = CreateKeyArray(Right_M, DecKeyGroup[3]); // Dec_LxKey의 크기 :  5
-
-	for (int i = 0; i < Right_M; i++) { // i가 0부터 4까지 실행
-		for (int j = 0; j < Right_N; j++) { // j가 0부터 5까지 실행
+	Dec_LxKey = CreateKeyArray(Right_N-Left_N+1, DecKeyGroup[0]); // Dec_LxKey의 크기 : 18 - 0 = 18
+	Dec_LyKey = CreateKeyArray(Right_M-Left_M+1, DecKeyGroup[1]); // Dec_LxKey의 크기 : 10 - 0 = 10
+	Dec_RxKey = CreateKeyArray(Right_N-Left_N+1, DecKeyGroup[2]); // Dec_LxKey의 크기 :  6
+	Dec_RyKey = CreateKeyArray(Right_M-Left_M+1, DecKeyGroup[3]); // Dec_LxKey의 크기 :  5
+	
+	for (int i = 0; i < Right_M-Left_M+1; i++) { // i가 0부터 4까지 실행
+		for (int j = 0; j < Right_N-Left_N+1; j++) { // j가 0부터 5까지 실행
 			int count = 0;
-			string EncKeyData = EncKey(Dec_LxKey[j], Dec_LyKey[i], Dec_RxKey[Right_N - j -1], Dec_RyKey[Right_M - i -1]);
-			
+			string EncKeyData = EncKey(Dec_LxKey[j], Dec_LyKey[i], Dec_RxKey[(Right_N-Left_N) - j], Dec_RyKey[(Right_M-Left_M) - i]);
 			for (int row = 0; row < BlockSize; row++) {
 				for (int col = 0; col < BlockSize; col++) {
 					DecSrc.at<uchar>(((BlockSize*(Left_M + i)) + row), ((BlockSize*(Left_N + j)) + col)) ^= EncKeyData[count];
 					count++;
 				}
 			}
-			cout << "ENCKEY 파라미터들 LX , LY , RX , RY : " << j << " " << i << " " << Right_N - j - 1 << " " << Right_M - i - 1 << endl;
+			cout << "ENCKEY 파라미터들 LX , LY , RX , RY : " << j << " " << i << " " << (Right_N-Left_N) - j << " " << (Right_M-Left_M) - i << endl;
 			cout << "[M,N] ------------  [" << (Left_M + i) << "," << (Left_N + j) << "]" << endl;
 		}
 	}
@@ -369,7 +350,7 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 						BlockData += src.at<uchar>((BlockSize * m) + i, (BlockSize * n) + j);//블록에 대한 데이터를 BlockData에 저장				
 				}
 				
-				string EncKeyData = EncKey(LxKey[n], LyKey[m], RxKey[N - n - 1], RyKey[M - m - 1]);//블록에 맞는 Encryption 키 생성하여 저장
+				string EncKeyData = EncKey(LxKey[n], LyKey[m], RxKey[N - n-1], RyKey[M - m-1]);//블록에 맞는 Encryption 키 생성하여 저장
 				int count = 0;
 				for (int block_row = 0; block_row < BlockSize; block_row++) {
 					for (int block_col = 0; block_col < BlockSize; block_col++) {
@@ -412,10 +393,10 @@ int main()
 	string* Ry_key = Create_EncRYKey(M,Ry_arr);
 	cout << "키 배열 생성 종료" << endl;
 
-	cout << "Lx_Key 처음 : " <<Lx_key[0] << endl;
-	cout << "Ly_Key 처음 : " << Ly_key[0] << endl;
-	cout << "Rx_Key 처음 : " << Rx_key[0] << endl;
-	cout << "Ry_Key 처음 : " << Ry_key[0] << endl;
+	cout << "Lx_Key 처음 : " <<Lx_key[1] << endl;
+	cout << "Ly_Key 처음 : " << Ly_key[1] << endl;
+	cout << "Rx_Key 처음 : " << Rx_key[N-2-1] << endl;
+	cout << "Ry_Key 처음 : " << Ry_key[M-2-1] << endl;
 	
 #pragma region Encryption 부분
 	cout << "Encryption 시작" << endl<<endl;
@@ -425,7 +406,7 @@ int main()
 #pragma endregion
 
 #pragma region Decryption 부분
-	cout << "Decryption" << endl << "Decryption 할 범위"<<endl<<"왼쪽 맨 위 블락의 행(M)과 열(N)\n오른쪽 맨 밑 블락의 행(M')과 열(N')\n입력 예시(ex. 2 3 4 5 , M'>M and N'>N)" << endl;
+	cout << "Decryption" << endl << "Decryption 할 범위"<<endl<<"왼쪽 맨 위 블락의 행(M)과 열(N)\n오른쪽 맨 밑 블락의 행(M')과 열(N')\n입력 예시(ex. 0 0 5 6 , M'>M and N'>N)" << endl;
 
 	cin >> Left_M >> Left_N >> Right_M >> Right_N;
 
