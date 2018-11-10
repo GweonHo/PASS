@@ -16,6 +16,8 @@ using namespace std;
 using namespace cv;
 
 
+
+
 string EncKey(string lx, string ly, string rx, string ry);
 Mat Encryption_Matrix(Mat src, string* LxKey, string* RxKey, string* LyKey, string* RyKey, int M, int N, int BlockSize);
 string* Create_EncLXKey(int n, string Lx);
@@ -27,11 +29,10 @@ string* CropKeyGen(int M, int N, int Left_M, int Left_N, int Right_M, int Right_
 Mat Decryption(Mat EncSrc, int M, int N, string* DecKeyGroup, int BlockSize, int Left_M, int Left_N, int Right_M, int Right_N);
 string HexToASCII(string hex);
 string EncKey(string lx, string ly, string rx, string ry);
+
 //TODO
-//부분 decryption 을 하라
-// CropKeyGen , Decryption을 하라 
-// CropKeyGen(Lx_m , Lx_n, Rx_m , Ry_n) => Lx_Key[m] , Lx_Key[N] , Rx_Key[m] , Ry_Key[n]
-// Decryption(CropKeyGen의 출력값)
+// 이미지 사이즈가 BlockSize의 배수가 아니고 약간의 차이가 나는 경우 차이가 나는 부분이 ENC가 되지 않는다.
+// 최적화 할 수 있는 부분 상당히 많음
 
 
 /*
@@ -179,6 +180,8 @@ std::string sha256(std::string input)
 }
 #pragma endregion
 
+#pragma region 키 배열 생성하는 곳 - 더 최적화 시킬 수 있음
+
 //모든 Lx 키를 만들어서 string*로 반환하는 함수
 string* Create_EncLXKey(int n,string Lx) {
 	string *Lx_Key = new string[n];
@@ -236,6 +239,10 @@ string* Create_EncRYKey(int m,string Ry) {
 	return Ry_Key;
 }
 
+#pragma endregion
+
+#pragma region Dec Key 배열 만들 때 만든 함수 - 더 최적화 가능
+//Lx , Ly와 관련해서 사용자가 Dec하고 싶은 범위 DecKey 생성하는 함수
 string Create_Specific_Location_Key_L(string Msk, int Location) {
 	string Spec_key = sha256(Msk); // Lx_Key[0] , Ly_Key[0]
 	for (int i = 0; i < Location; i++) {
@@ -244,6 +251,7 @@ string Create_Specific_Location_Key_L(string Msk, int Location) {
 
 	return Spec_key;
 }
+//Rx와 관련해서 사용자가 Dec하고 싶은 범위 DecKey 생성하는 함수
 string Create_Specific_Location_Key_Rx(string Msk, int Location,int N) {
 	string Spec_key = sha256(Msk); // Rx_Key[0]
 	for (int i = 0; i < N-Location; i++) {// i < 12
@@ -252,6 +260,7 @@ string Create_Specific_Location_Key_Rx(string Msk, int Location,int N) {
 
 	return Spec_key;
 }
+//Ry와 관련해서 사용자가 Dec하고 싶은 범위 DecKey 생성하는 함수
 string Create_Specific_Location_Key_Ry(string Msk, int Location,int M) {
 	string Spec_key = sha256(Msk); // Ry_Key[0]
 	for (int i = 0; i < M-Location; i++) {
@@ -260,6 +269,10 @@ string Create_Specific_Location_Key_Ry(string Msk, int Location,int M) {
 
 	return Spec_key;
 }
+#pragma endregion
+
+// Decryption함수에서 CropKeyGen함수를 통해서 나온 출력값을 통해서 필요한 DecKey들을 만들어 반환하는 함수
+// ex. 사용자의 입력이 0 0 5 6이면 Lx를 기준으로 Lx_key[0]~Lx_Key[N]까지 만들어서 반환함
 string* CreateKeyArray(int len, string Key) {
 	string* KeyArray = new string[len];
 	KeyArray[0] = Key;
@@ -268,6 +281,7 @@ string* CreateKeyArray(int len, string Key) {
 	}
 	return KeyArray;
 }
+
 // Decryption할 범위를 사각형으로 생각했을 때
 // 사각형 왼쪽 위 모서리에 있는 블락의 (M,N)을 각각 Left_M , Left_N
 // 사각형 오른쪽 위 모서리에 있는 블락의 (M',N')을 각각 Right_M , Right_N
@@ -291,7 +305,7 @@ Mat Decryption(Mat EncSrc, int M, int N, string* DecKeyGroup, int BlockSize, int
 	string* Dec_LxKey, *Dec_LyKey, *Dec_RxKey, *Dec_RyKey;
 	/*
 		예시
-		M : 11 N : 17
+		M : 10 N : 18
 		Left_N : 0 , Left_M : 0
 		Right_N : 6 , Right_M : 5
 	*/
@@ -301,7 +315,7 @@ Mat Decryption(Mat EncSrc, int M, int N, string* DecKeyGroup, int BlockSize, int
 	Dec_RyKey = CreateKeyArray(Right_M, DecKeyGroup[3]); // Dec_LxKey의 크기 :  5
 
 	for (int i = 0; i < Right_M; i++) { // i가 0부터 4까지 실행
-		for (int j = 0; j < Right_N; j++) { // j가 0부터 6까지 실행
+		for (int j = 0; j < Right_N; j++) { // j가 0부터 5까지 실행
 			int count = 0;
 			string EncKeyData = EncKey(Dec_LxKey[j], Dec_LyKey[i], Dec_RxKey[Right_N - j -1], Dec_RyKey[Right_M - i -1]);
 			
@@ -325,30 +339,28 @@ string HexToASCII(string hex)
 	std::string newString;
 	for (int i = 0; i< len; i += 2)
 	{
-		string byte = hex.substr(i, 2);
-		//cout << byte << " ";
-		char chr = (char)(int)strtol(byte.c_str(), NULL, 16);
-		newString += chr;
+		string byte = hex.substr(i, 2);//입력 받은 hex String을 2개씩 쪼개는 곳
+		char chr = (char)(int)strtol(byte.c_str(), NULL, 16);// ASCII로 변환하는 곳 
+		newString += chr; //newString에 변환하는 값을 저장
 	}
-	//cout << newString << endl;
 	return newString;
 }
+
 //블록에 맞는 lx , ly , rx , ry 키를 입력으로 갖고, sha256을 8번 돌려서 append 한 것을 반환하는 함수
 string EncKey(string lx, string ly, string rx, string ry) {
 	std::string tempKey = sha256(lx + ly + rx + ry);
 	for (int i = 0; i < 7; i++)	
 		tempKey += sha256(tempKey);
-	
-	//cout << tempKey << endl;
-	string EncKey = HexToASCII(tempKey);
-	//cout << EncKey << endl;
+	//sha256함수를 돌려서 나온 결과물이 hex string이어서 HexToASCII함수를 만듬
+	string EncKey = HexToASCII(tempKey); 
+
 	return EncKey;
 }
+
 // 입력값 : Encryption할 사진 , Lx 키배열 , Rx 키배열 , Ly 키배열 , Ry 키배열 , 블록 매트릭스의 행의 개수 , 블록 매트릭스의 열의 개수
 Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* RyKey,int M,int N,int BlockSize) {
 	Mat EncMat = src.clone(); // Encryption된 사진을 넣을 행렬
-	// (i,j) : i = row , j = column
-	// M : 45 , N : 80 (dog.jpeg) 
+	
 		for (int m = 0; m < M; m++) { // 블록매트릭스의 행만큼 실행되는 함수
 			for (int n = 0; n < N; n++) { //블록매트릭스의 열만큼 실행되는 함수 지금까지 M*N번
 				string BlockData = ""; // 하나의 블록에 대한 데이터를 저장할 임시 string 변수
@@ -357,11 +369,11 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 						BlockData += src.at<uchar>((BlockSize * m) + i, (BlockSize * n) + j);//블록에 대한 데이터를 BlockData에 저장				
 				}
 				
-				string EncKeyData = EncKey(LxKey[n], LyKey[m], RxKey[N - n - 1], RyKey[M - m - 1]);
+				string EncKeyData = EncKey(LxKey[n], LyKey[m], RxKey[N - n - 1], RyKey[M - m - 1]);//블록에 맞는 Encryption 키 생성하여 저장
 				int count = 0;
 				for (int block_row = 0; block_row < BlockSize; block_row++) {
 					for (int block_col = 0; block_col < BlockSize; block_col++) {
-						EncMat.at<uchar>((BlockSize * m) + block_row, (BlockSize * n) + block_col) = BlockData[count] ^ EncKeyData[count];
+						EncMat.at<uchar>((BlockSize * m) + block_row, (BlockSize * n) + block_col) = BlockData[count] ^ EncKeyData[count];// XOR하는 부분
 						count++;
 					}
 				}
@@ -384,12 +396,10 @@ int main()
 	
 	/// Load an image
 	src = imread("lion.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-	//src = imread("dong.jpg");
 	M = src.rows / BlockSize; // 블록 매트릭스의 행의 개수
 	N = src.cols / BlockSize; // 블록 매트릭스의 열의 개수
 	cout << "블록 매트릭스의 행 - M : " << M << endl << "블록 매트릭스의 열 - N : "<< N << endl<<endl;
 	cout << " src의 행 - M' : " << src.rows << endl << " src의 열 - N' : " << src.cols << endl << endl;
-	//dst = src.clone();
 	if (!src.data)
 	{
 		return -1;
@@ -407,22 +417,26 @@ int main()
 	cout << "Rx_Key 처음 : " << Rx_key[0] << endl;
 	cout << "Ry_Key 처음 : " << Ry_key[0] << endl;
 	
-	
+#pragma region Encryption 부분
 	cout << "Encryption 시작" << endl<<endl;
 	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N,BlockSize);
 	imwrite("Enc_lion_Block16.jpeg", dst);
 	cout << "Encryption 종료" << endl<<endl;
+#pragma endregion
 
+#pragma region Decryption 부분
 	cout << "Decryption" << endl << "Decryption 할 범위"<<endl<<"왼쪽 맨 위 블락의 행(M)과 열(N)\n오른쪽 맨 밑 블락의 행(M')과 열(N')\n입력 예시(ex. 2 3 4 5 , M'>M and N'>N)" << endl;
 
 	cin >> Left_M >> Left_N >> Right_M >> Right_N;
 
+	cout << "CropKeyGen함수 실행" << endl;
 	string* DecKey = CropKeyGen(M, N,Left_M, Left_N, Right_M, Right_N, Lx_arr, Ly_arr, Rx_arr, Ry_arr);
-
+	cout << "CropKeyGen 함수 종료" << endl;
+	cout << "Decryption 함수 실행" << endl;
 	Dec = Decryption(dst, M, N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
-
+	cout << "Decryption 함수 종료" << endl;
 	imwrite("Dec_lion_Block16.jpeg", Dec);
-	
+#pragma endregion
 
 	return 0;
 }
