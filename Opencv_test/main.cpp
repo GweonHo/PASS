@@ -48,6 +48,13 @@ string* Create_EncKey(int length, string KEY) {
 
 	return Key;
 }
+string* Create_EncKey_sub(int length, string KEY) {
+	string *Key = new string[length];
+	Key[0] = KEY;
+	for (int i = 1; i < length; i++) Key[i] = sha256(Key[i - 1]);
+
+	return Key;
+}
 #pragma endregion
 
 #pragma region Dec Key 배열 만들 때 만든 함수
@@ -61,7 +68,7 @@ string Create_Specific_Location_Key_L(string Msk, int Location) {
 //Rx와 관련해서 사용자가 Dec하고 싶은 범위 DecKey 생성하는 함수
 string Create_Specific_Location_Key_R(string Msk, int Location, int Length) {
 	string Spec_key = sha256(Msk); // Rx_Key[0]
-	for (int i = 0; i <Length - Location - 1; i++) 	Spec_key = sha256(Spec_key);
+	for (int i = 1; i <Length - Location; i++) 	Spec_key = sha256(Spec_key);
 
 	return Spec_key;
 }
@@ -94,10 +101,10 @@ Mat Decryption(Mat EncSrc, int M, int N, string* DecKeyGroup, int BlockSize, int
 		Left_N : 0 , Left_M : 0
 		Right_N : 6 , Right_M : 5
 	*/
-	Dec_LxKey = Create_EncKey(Right_N-Left_N+1, DecKeyGroup[0]); // Dec_LxKey의 크기 : 18 - 0 = 18
-	Dec_LyKey = Create_EncKey(Right_M-Left_M+1, DecKeyGroup[1]); // Dec_LxKey의 크기 : 10 - 0 = 10
-	Dec_RxKey = Create_EncKey(Right_N-Left_N+1, DecKeyGroup[2]); // Dec_LxKey의 크기 :  6
-	Dec_RyKey = Create_EncKey(Right_M-Left_M+1, DecKeyGroup[3]); // Dec_LxKey의 크기 :  5
+	Dec_LxKey = Create_EncKey_sub(Right_N-Left_N+1, DecKeyGroup[0]); // Dec_LxKey의 크기 : 18 - 0 = 18
+	Dec_LyKey = Create_EncKey_sub(Right_M-Left_M+1, DecKeyGroup[1]); // Dec_LxKey의 크기 : 10 - 0 = 10
+	Dec_RxKey = Create_EncKey_sub(Right_N-Left_N+1, DecKeyGroup[2]); // Dec_LxKey의 크기 :  6
+	Dec_RyKey = Create_EncKey_sub(Right_M-Left_M+1, DecKeyGroup[3]); // Dec_LxKey의 크기 :  5
 	
 	for (int i = 0; i < Right_M-Left_M+1; i++) { // i가 0부터 4까지 실행
 		for (int j = 0; j < Right_N-Left_N+1; j++) { // j가 0부터 5까지 실행
@@ -179,7 +186,7 @@ int main()
 	int Left_N, Left_M , Right_N,Right_M;
 	
 	/// Load an image
-	src = imread("lion.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+	src = imread("pen.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 	M = src.rows / BlockSize; // 블록 매트릭스의 행의 개수
 	N = src.cols / BlockSize; // 블록 매트릭스의 열의 개수
 	cout << "블록 매트릭스의 행 - M : " << M << endl << "블록 매트릭스의 열 - N : "<< N << endl<<endl;
@@ -196,15 +203,15 @@ int main()
 	string* Ry_key = Create_EncKey(M,Ry_arr);
 	cout << "키 배열 생성 종료" << endl;
 
-	cout << "Lx_Key 처음 : " <<Lx_key[1] << endl;
-	cout << "Ly_Key 처음 : " << Ly_key[1] << endl;
-	cout << "Rx_Key 처음 : " << Rx_key[N-2-1] << endl;
-	cout << "Ry_Key 처음 : " << Ry_key[M-2-1] << endl;
+	cout << "Lx_Key 처음 : " <<Lx_key[0] << endl;
+	cout << "Ly_Key 처음 : " << Ly_key[0] << endl;
+	cout << "Rx_Key 처음 : " << Rx_key[N-1] << endl;
+	cout << "Ry_Key 처음 : " << Ry_key[M-1] << endl;
 	
 #pragma region Encryption 부분
 	cout << "Encryption 시작" << endl<<endl;
 	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N,BlockSize);
-	imwrite("Enc_lion_Block16.jpeg", dst);
+	imwrite("Enc_pen_Block16.jpeg", dst);
 	cout << "Encryption 종료" << endl<<endl;
 #pragma endregion
 
@@ -216,10 +223,15 @@ int main()
 	cout << "CropKeyGen함수 실행" << endl;
 	string* DecKey = CropKeyGen(M, N,Left_M, Left_N, Right_M, Right_N, Lx_arr, Ly_arr, Rx_arr, Ry_arr);
 	cout << "CropKeyGen 함수 종료" << endl;
+
+
 	cout << "Decryption 함수 실행" << endl;
 	Dec = Decryption(dst, M, N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
 	cout << "Decryption 함수 종료" << endl;
-	imwrite("Dec_lion_Block16.jpeg", Dec);
+	imwrite("Dec_pen_Block16.jpeg", Dec);
+	
+	imshow("Display Dec", Dec);
+	waitKey(0);
 #pragma endregion
 
 	return 0;
