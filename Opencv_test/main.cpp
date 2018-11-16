@@ -15,6 +15,7 @@
 using namespace std;
 using namespace cv;
 
+string random_string(size_t length);
 string EncKey(string lx, string ly, string rx, string ry);
 Mat Encryption_Matrix(Mat src, string* LxKey, string* RxKey, string* LyKey, string* RyKey, int M, int N, int BlockSize);
 string* Create_EncKey(int length, string KEY);
@@ -35,6 +36,22 @@ string EncKey(string lx, string ly, string rx, string ry);
 ex) 48 x 48 사진을 블록사이즈 16으로 나눈 결과를 블록 매트릭스라 할 때,
 	이 때, 이 블록 매트릭스의 행의 개수를 M , 열의 개수를 N
 */
+
+string random_string(size_t length)
+{
+	auto randchar = []() -> char //generator를 만든 곳
+	{
+		const char charset[] =
+			"0123456789"
+			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			"abcdefghijklmnopqrstuvwxyz";
+		const size_t max_index = (sizeof(charset) - 1);
+		return charset[rand() % max_index];
+	};
+	string random_str(length, 0);
+	std::generate_n(random_str.begin(), length, randchar);//lenght 만큼 randchar에서 랜덤하게 뽑아와 random_str에 저장
+	return random_str;
+}
 
 #pragma region 키 배열 생성하는 곳
 
@@ -175,10 +192,14 @@ Mat Encryption_Matrix(Mat src,string* LxKey,string* RxKey,string* LyKey,string* 
 
 int main()
 {
-	char Lx_arr[32] = { "AK12rsc9320dkcvc9d02k2d2j230dkC" };
-	char Ly_arr[32] = { "dfldje230idkdvj39wodkdjv023kfjk" };
-	char Rx_arr[32] = { "sdfj3k2d9fslkgadkjSDEdvkej23l9c" };
-	char Ry_arr[32] = { "DJflkf320fdkvj12e1lkvcv9woq3kzd" };
+	string Lx = random_string(32); 	string Ly = random_string(32);
+	string Rx = random_string(32); 	string Ry = random_string(32);
+
+	cout << "Lx : " << Lx << endl;
+	cout << "Ly : " << Ly << endl;
+	cout << "Rx : " << Rx << endl;
+	cout << "Ry : " << Ry << endl<<endl;
+	cout << "----------------------------- 초기값 설정 완료-------------------------------" << endl;
 
 	Mat src,dst,Dec;
 	int BlockSize = 16;
@@ -186,49 +207,48 @@ int main()
 	int Left_N, Left_M , Right_N,Right_M;
 	
 	/// Load an image
-	src = imread("pen.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+	src = imread("dog.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 	M = src.rows / BlockSize; // 블록 매트릭스의 행의 개수
 	N = src.cols / BlockSize; // 블록 매트릭스의 열의 개수
-	cout << "블록 매트릭스의 행 - M : " << M << endl << "블록 매트릭스의 열 - N : "<< N << endl<<endl;
-	cout << " src의 행 - M' : " << src.rows << endl << " src의 열 - N' : " << src.cols << endl << endl;
+	cout << "블록 매트릭스의 행 - M : " << M << endl << "블록 매트릭스의 열 - N : "<< N << endl;
+	cout << "src의 행 - M' : " << src.rows << endl << "src의 열 - N' : " << src.cols << endl << endl;
 	if (!src.data)
 	{
 		return -1;
 	}	
 	// LX, LY, RX , RY에 맞는 키 배열을 생성하는 곳
-	cout << "LX, LY, RX , RY에 맞는 키 배열을 생성하는 곳" << endl;
-	string* Lx_key = Create_EncKey(N,Lx_arr);
-	string* Ly_key = Create_EncKey(M,Ly_arr);
-	string* Rx_key = Create_EncKey(N,Rx_arr);
-	string* Ry_key = Create_EncKey(M,Ry_arr);
-	cout << "키 배열 생성 종료" << endl;
+	string* Lx_key = Create_EncKey(N,Lx);
+	string* Ly_key = Create_EncKey(M,Ly);
+	string* Rx_key = Create_EncKey(N,Rx);
+	string* Ry_key = Create_EncKey(M,Ry);
+	cout << "----------------------------- 키 배열 생성 ----------------------------------" << endl << endl;;
 
-	cout << "Lx_Key 처음 : " <<Lx_key[0] << endl;
-	cout << "Ly_Key 처음 : " << Ly_key[0] << endl;
-	cout << "Rx_Key 처음 : " << Rx_key[N-1] << endl;
-	cout << "Ry_Key 처음 : " << Ry_key[M-1] << endl;
+	cout << "Lx 키 데이터의 처음 값(= sha256(Lx) ) : " <<Lx_key[0] << endl;
+	cout << "Ly 키 데이터의 처음 값(= sha256(Ly) ) : " << Ly_key[0] << endl;
+	cout << "Rx 키 데이터의 처음 값(= sha256(Rx) ) : " << Rx_key[0] << endl;
+	cout << "Ry 키 데이터의 처음 값(= sha256(Ry) ) : " << Ry_key[0] << endl<<endl;
 	
 #pragma region Encryption 부분
 	cout << "Encryption 시작" << endl<<endl;
 	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N,BlockSize);
-	imwrite("Enc_pen_Block16.jpeg", dst);
+	imwrite("Enc_dog_Block16.jpeg", dst);
 	cout << "Encryption 종료" << endl<<endl;
 #pragma endregion
 
 #pragma region Decryption 부분
-	cout << "Decryption" << endl << "Decryption 할 범위"<<endl<<"왼쪽 맨 위 블락의 행(M)과 열(N)\n오른쪽 맨 밑 블락의 행(M')과 열(N')\n입력 예시(ex. 0 0 5 6 , M'>M and N'>N)" << endl;
+	cout << "Decryption" << endl << "Decryption 할 BLOCK 범위 - M N M* N* ( M* > M , N* > N ) \n입력 예시(ex. 0 0 5 6 )" << endl << endl;
 
 	cin >> Left_M >> Left_N >> Right_M >> Right_N;
 
 	cout << "CropKeyGen함수 실행" << endl;
-	string* DecKey = CropKeyGen(M, N,Left_M, Left_N, Right_M, Right_N, Lx_arr, Ly_arr, Rx_arr, Ry_arr);
+	string* DecKey = CropKeyGen(M, N,Left_M, Left_N, Right_M, Right_N, Lx, Ly, Rx, Ry);
 	cout << "CropKeyGen 함수 종료" << endl;
 
 
 	cout << "Decryption 함수 실행" << endl;
 	Dec = Decryption(dst, M, N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
 	cout << "Decryption 함수 종료" << endl;
-	imwrite("Dec_pen_Block16.jpeg", Dec);
+	imwrite("Dec_dog_Block16.jpeg", Dec);
 	
 	imshow("Display Dec", Dec);
 	waitKey(0);
