@@ -1,6 +1,8 @@
 #ifndef SHA256_H
 #define SHA256_H
 #include <string>
+#include<iostream>
+using namespace std;
 
 class SHA256
 {
@@ -177,11 +179,21 @@ std::string sha256(std::string input)
 	ctx.init();
 	ctx.update((unsigned char*)input.c_str(), input.length());
 	ctx.final(digest);
+	
+	//char buf[2 * SHA256::DIGEST_SIZE + 1];
+	//buf[2 * SHA256::DIGEST_SIZE] = 0;
 
-	char buf[2 * SHA256::DIGEST_SIZE + 1];
-	buf[2 * SHA256::DIGEST_SIZE] = 0;
+	char buf[SHA256::DIGEST_SIZE + 1];
+	buf[SHA256::DIGEST_SIZE] = 0;
+	
+
+	sprintf(buf, "%s", digest); // ÀÏ´Ü ¼Óµµ´Â »¡¶óÁü
+	
+	/*
 	for (int i = 0; i < SHA256::DIGEST_SIZE; i++)
-		sprintf(buf + i * 2, "%02x", digest[i]);
+		sprintf(buf + i, "%c", digest[i]);
+		//sprintf(buf + i * 2, "%02x", digest[i]);
+	*/
 	return std::string(buf);
 }
 #endif
