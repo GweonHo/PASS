@@ -163,11 +163,13 @@ string EncKey(string lx, string ly, string rx, string ry) {
 	for (int i = 0; i < 8; i++)	
 		tempKey += sha256(key + index[i]);
 	//sha256함수를 돌려서 나온 결과물이 hex string이어서 HexToASCII함수를 만듬
-	//string EncKey = HexToASCII(tempKey); 
 
-	return tempKey;
 	
-	//return EncKey;
+
+	return tempKey; // HexToASCII 안 쓴 버전
+
+	//string EncKey = HexToASCII(tempKey);////HexToASCII 쓴 버전 
+	//return EncKey; //HexToASCII 쓴 버전
 }
 
 // 입력값 : Encryption할 사진 , Lx 키배열 , Rx 키배열 , Ly 키배열 , Ry 키배열 , 블록 매트릭스의 행의 개수 , 블록 매트릭스의 열의 개수
@@ -263,13 +265,13 @@ int main()
 	M = test.rows / BlockSize; // 블록 매트릭스의 행의 개수
 	N = test.cols / BlockSize;
 	cout << "블록 매트릭스의 행 - M : " << M << endl << "블록 매트릭스의 열 - N : " << N << endl;
+	
 
-
-	string* Lx_key = Create_EncKey(N, Lx);
+	string* Lx_key = Create_EncKey(3*N, Lx);
 	string* Ly_key = Create_EncKey(M, Ly);
-	string* Rx_key = Create_EncKey(N, Rx);
+	string* Rx_key = Create_EncKey(3*N, Rx);
 	string* Ry_key = Create_EncKey(M, Ry);
-	string* DecKey = CropKeyGen(M, N, Left_M, Left_N, Right_M, Right_N, Lx, Ly, Rx, Ry);
+	string* DecKey = CropKeyGen(M, 3*N, Left_M, Left_N, Right_M, Right_N, Lx, Ly, Rx, Ry);
 
 
 	Mat edges;
@@ -279,16 +281,12 @@ int main()
 	{
 		Mat frame,enc,dec;
 		cap >> frame; // get a new frame from camera
-		//M = frame.rows / BlockSize; // 블록 매트릭스의 행의 개수
-		//N = frame.cols / BlockSize;
-		//string* Lx_key = Create_EncKey(N, Lx);
-		//string* Ly_key = Create_EncKey(M, Ly);
-		//string* Rx_key = Create_EncKey(N, Rx);
-		//string* Ry_key = Create_EncKey(M, Ry);
-		//string* DecKey = CropKeyGen(M, N, Left_M, Left_N, Right_M, Right_N, Lx, Ly, Rx, Ry);
+		
 		cvtColor(frame, edges, COLOR_BGR2GRAY);
-		enc = Encryption_Matrix(edges, Lx_key, Rx_key, Ly_key, Ry_key, M, N, BlockSize);
-		dec = Decryption(enc, M, N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
+		enc = Encryption_Matrix(frame, Lx_key, Rx_key, Ly_key, Ry_key, M, 3*N, BlockSize);//컬러 버전
+
+		//enc = Encryption_Matrix(edges, Lx_key, Rx_key, Ly_key, Ry_key, M, N, BlockSize);//흑백 버전
+		dec = Decryption(enc, M, 3*N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
 		imshow("edges", dec);
 		if (waitKey(30) >= 0) break;
 	}

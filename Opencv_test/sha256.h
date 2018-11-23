@@ -180,20 +180,17 @@ std::string sha256(std::string input)
 	ctx.update((unsigned char*)input.c_str(), input.length());
 	ctx.final(digest);
 	
-	//char buf[2 * SHA256::DIGEST_SIZE + 1];
-	//buf[2 * SHA256::DIGEST_SIZE] = 0;
-
-	char buf[SHA256::DIGEST_SIZE + 1];
-	buf[SHA256::DIGEST_SIZE] = 0;
 	
 
+	char buf[SHA256::DIGEST_SIZE + 1]; // HexToASCII 안 쓰는 버전으로 할 때
+	buf[SHA256::DIGEST_SIZE] = 0;
 	sprintf(buf, "%s", digest); // 일단 속도는 빨라짐
 	
-	/*
-	for (int i = 0; i < SHA256::DIGEST_SIZE; i++)
-		sprintf(buf + i, "%c", digest[i]);
+	//char buf[2 * SHA256::DIGEST_SIZE + 1]; //HexToASCII 쓴 버전
+	//buf[2 * SHA256::DIGEST_SIZE] = 0;
+	//for (int i = 0; i < SHA256::DIGEST_SIZE; i++)//Hex string으로 나오는 부분
 		//sprintf(buf + i * 2, "%02x", digest[i]);
-	*/
+	
 	return std::string(buf);
 }
 #endif
