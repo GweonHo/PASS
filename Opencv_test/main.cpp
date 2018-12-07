@@ -166,10 +166,10 @@ string EncKey(string lx, string ly, string rx, string ry) {
 
 	
 
-	return tempKey; // HexToASCII 안 쓴 버전
+	//return tempKey; // HexToASCII 안 쓴 버전
 
-	//string EncKey = HexToASCII(tempKey);////HexToASCII 쓴 버전 
-	//return EncKey; //HexToASCII 쓴 버전
+	string EncKey = HexToASCII(tempKey);////HexToASCII 쓴 버전 
+	return EncKey; //HexToASCII 쓴 버전
 }
 
 // 입력값 : Encryption할 사진 , Lx 키배열 , Rx 키배열 , Ly 키배열 , Ry 키배열 , 블록 매트릭스의 행의 개수 , 블록 매트릭스의 열의 개수
@@ -201,27 +201,27 @@ int main()
 //	cout << "Ry : " << Ry << endl<<endl;
 //	cout << "----------------------------- 초기값 설정 완료-------------------------------" << endl;
 //
-//	Mat src,dst,Dec;
+	Mat src,dst,Dec;
 	int BlockSize = 16;
-	//int M, N;
+	int M, N;
 	int Left_N, Left_M , Right_N,Right_M;
 //	
 //	/// Load an image
-//	src = imread("dog.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-//	M = src.rows / BlockSize; // 블록 매트릭스의 행의 개수
-//	N = src.cols / BlockSize; // 블록 매트릭스의 열의 개수
-//	cout << "블록 매트릭스의 행 - M : " << M << endl << "블록 매트릭스의 열 - N : "<< N << endl;
-//	cout << "src의 행 - M' : " << src.rows << endl << "src의 열 - N' : " << src.cols << endl << endl;
-//	if (!src.data)
-//	{
-//		return -1;
-//	}	
-//	// LX, LY, RX , RY에 맞는 키 배열을 생성하는 곳
-	/*string* Lx_key = Create_EncKey(N,Lx);
+	src = imread("test.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+	M = src.rows / BlockSize; // 블록 매트릭스의 행의 개수
+	N = src.cols / BlockSize; // 블록 매트릭스의 열의 개수
+	cout << "블록 매트릭스의 행 - M : " << M << endl << "블록 매트릭스의 열 - N : "<< N << endl;
+	cout << "src의 행 - M' : " << src.rows << endl << "src의 열 - N' : " << src.cols << endl << endl;
+	if (!src.data)
+	{
+		return -1;
+	}	
+	// LX, LY, RX , RY에 맞는 키 배열을 생성하는 곳
+	string* Lx_key = Create_EncKey(N,Lx);
 	string* Ly_key = Create_EncKey(M,Ly);
 	string* Rx_key = Create_EncKey(N,Rx);
-	string* Ry_key = Create_EncKey(M,Ry);*/
-//	cout << "----------------------------- 키 배열 생성 ----------------------------------" << endl << endl;;
+	string* Ry_key = Create_EncKey(M,Ry);
+	cout << "----------------------------- 키 배열 생성 ----------------------------------" << endl << endl;;
 //
 //	cout << "Lx 키 데이터의 처음 값(= sha256(Lx) ) : " <<Lx_key[0] << endl;
 //	cout << "Ly 키 데이터의 처음 값(= sha256(Ly) ) : " << Ly_key[0] << endl;
@@ -230,8 +230,8 @@ int main()
 //	
 //#pragma region Encryption 부분
 //	cout << "Encryption 시작" << endl<<endl;
-//	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N,BlockSize);
-//	imwrite("Enc_dog_Block16.jpeg", dst);
+	dst = Encryption_Matrix(src, Lx_key, Rx_key, Ly_key, Ry_key,M,N,BlockSize);
+	imwrite("Enc_test_Block16.jpeg", dst);
 //	cout << "Encryption 종료" << endl<<endl;
 //#pragma endregion
 //
@@ -242,19 +242,22 @@ int main()
 	cin >> Left_M >> Left_N >> Right_M >> Right_N;
 	
 //
-//	cout << "CropKeyGen함수 실행" << endl;
-//	string* DecKey = CropKeyGen(M, N,Left_M, Left_N, Right_M, Right_N, Lx, Ly, Rx, Ry);
+	cout << "CropKeyGen함수 실행" << endl;
+	string* DecKey = CropKeyGen(M, N,Left_M, Left_N, Right_M, Right_N, Lx, Ly, Rx, Ry);
 //	cout << "CropKeyGen 함수 종료" << endl;
 //
 //
 //	cout << "Decryption 함수 실행" << endl;
-//	Dec = Decryption(dst, M, N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
+	Dec = Decryption(dst, M, N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
 //	cout << "Decryption 함수 종료" << endl;
-//	imwrite("Dec_dog_Block16.jpeg", Dec);
+	imwrite("Dec_test_Block16.jpeg", Dec);
 //	
-//	imshow("Display Dec", Dec);
-//	waitKey(0);
+	imshow("Display Dec", Dec);
+
+
+	waitKey(0);
 //#pragma endregion
+	/*
 	VideoCapture cap(0); // open the default camera
 	if (!cap.isOpened())  // check if we succeeded
 		return -1;
@@ -267,11 +270,11 @@ int main()
 	cout << "블록 매트릭스의 행 - M : " << M << endl << "블록 매트릭스의 열 - N : " << N << endl;
 	
 
-	string* Lx_key = Create_EncKey(3*N, Lx);
+	string* Lx_key = Create_EncKey(N, Lx);
 	string* Ly_key = Create_EncKey(M, Ly);
-	string* Rx_key = Create_EncKey(3*N, Rx);
+	string* Rx_key = Create_EncKey(N, Rx);
 	string* Ry_key = Create_EncKey(M, Ry);
-	string* DecKey = CropKeyGen(M, 3*N, Left_M, Left_N, Right_M, Right_N, Lx, Ly, Rx, Ry);
+	string* DecKey = CropKeyGen(M, N, Left_M, Left_N, Right_M, Right_N, Lx, Ly, Rx, Ry);
 
 
 	Mat edges;
@@ -283,15 +286,15 @@ int main()
 		cap >> frame; // get a new frame from camera
 		
 		cvtColor(frame, edges, COLOR_BGR2GRAY);
-		enc = Encryption_Matrix(frame, Lx_key, Rx_key, Ly_key, Ry_key, M, 3*N, BlockSize);//컬러 버전
+		enc = Encryption_Matrix(frame, Lx_key, Rx_key, Ly_key, Ry_key, M, N, BlockSize);//컬러 버전
 
 		//enc = Encryption_Matrix(edges, Lx_key, Rx_key, Ly_key, Ry_key, M, N, BlockSize);//흑백 버전
-		dec = Decryption(enc, M, 3*N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
+		dec = Decryption(enc, M, N, DecKey, BlockSize, Left_M, Left_N, Right_M, Right_N);
 		imshow("edges", dec);
 		if (waitKey(30) >= 0) break;
 	}
 	// the camera will be deinitialized automatically in VideoCapture destructor
-
+	*/
 	return 0;
 }
 
